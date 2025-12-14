@@ -1,0 +1,1 @@
+export const DB_Name = "videotube"   //as this is not a senstive information and needs to be reusable i.e. keeping it in this folder.
