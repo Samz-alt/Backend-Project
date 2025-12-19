@@ -8,3 +8,5 @@ This is a learning Project based path for learning Backend Development
 "jsonwebtoken": used to generate auth tokens.
 "mongoose": connector used to connect and talk to for MongoDB.
 "mongoose-aggregate-paginate-v2": 
+"cloudinary" : a server where we can save and manage our media files.
+"multer" : used to Handling Media Files.
