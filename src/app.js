@@ -16,7 +16,7 @@ app.use(express.urlencoded({
 }))
 
 //this middleware is used to store public assets
-app.use(express.static())
+app.use(express.static("public"))
 
 //this middleware is used for JSON parsing request
 app.use(express.json({
@@ -24,5 +24,12 @@ app.use(express.json({
 }))
 
 app.use(cookieparser())
+
+// route import
+import userRouter from "./routes/user.route.js"
+
+
+//route declaration
+app.use("/api/v1/users", userRouter)
 
 export { app }
