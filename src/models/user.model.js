@@ -45,11 +45,11 @@ const userSchema = new mongoose.Schema({
 }, { timestamps: true })
 
 //middleware hook for encrypting the password before saving it to the DB
-userSchema.pre("save", async function () {
-    if (!this.isModified("password")) return  //here "this" is the mongoose document or we know as schema
+userSchema.pre("save", async function (next) {
+    if (!this.isModified("password")) return next()  //here "this" is the mongoose document or we know as schema
 
     this.password = await bcrypt.hash(this.password, 10) //this means before saving the password encrypt it to hash
-
+    next()
 })
 
 //assigning method in the schema for checking the password when the user sends requests for login or different purposes
