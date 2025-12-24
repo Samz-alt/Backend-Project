@@ -46,10 +46,10 @@ const userSchema = new mongoose.Schema({
 
 //middleware hook for encrypting the password before saving it to the DB
 userSchema.pre("save", async function (next) {       //here "pre" is the middleware for the schema
-    if (!this.isModified("password")) return next()  //here "this" is the mongoose document 
+    if (!this.isModified("password")) return //here "this" is the mongoose document....We can omit next entirely Mongoose sees that it’s an async function and waits for it to resolve.
 
     this.password = await bcrypt.hash(this.password, 10) //this means before saving the password encrypt it to hash
-    next()
+
 })
 
 //assigning method in the schema for checking the password when the user sends requests for login or different purposes

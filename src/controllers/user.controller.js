@@ -28,7 +28,7 @@ const registerUser = asyncHandler(async (req, res) => {
         throw new APIError(400, "@ is missing")
     }
 
-    const existedUser = User.findOne({
+    const existedUser = await User.findOne({
         $or: [{ username }, { email }]    //$or is used for finding a User in DB with any of the field mentioned in the array and this is for checking both at once
     })
 
