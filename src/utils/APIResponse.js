@@ -1,8 +1,8 @@
 class APIResponse {
-    constructor(statusCode, message = "Something went wrong", data) {
+    constructor(statusCode, data, message = "Something went wrong") {
         this.statusCode = statusCode
-        this.message = message
         this.data = data
+        this.message = message
         this.successCode = statusCode < 400
     }
 }
