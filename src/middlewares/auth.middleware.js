@@ -1,6 +1,6 @@
-import { User } from "../models/user.model";
-import { APIError } from "../utils/APIError";
-import { asyncHandler } from "../utils/asyncHandler";
+import { User } from "../models/user.model.js";
+import { APIError } from "../utils/APIError.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 import jwt from "jsonwebtoken"
 
 
@@ -10,7 +10,8 @@ const verifyJwt = asyncHandler(async (req, _, next) => {
     // req also has an accessToken object because of cookie-parser middleware
     // req.header("Authorization") is the Express-friendly way.    req.headers.authorization is the raw Node way.
 
-    const accessToken = req.cookie?.accessToken || req.header("Authorization")?.replace("Bearer ", "")
+    const accessToken = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "")
+    console.log(accessToken);
 
     if (!accessToken) {
         throw new APIError(401, "Unauthorized Request")
@@ -20,7 +21,7 @@ const verifyJwt = asyncHandler(async (req, _, next) => {
 
     // this DB call isn't technically need but it should be called to check the lastest state of the user and if the user is deleted or if it's state has been changed.
     // JWT proves identity, DB confirms authorization
-    const user = await User.findById(decodedToken?._id).select("-password", "-refreshToken")
+    const user = await User.findById(decodedToken?._id).select("-password -refreshToken")
 
     if (!user) {
         throw new APIError(404, "User Not Found, Invalid Token")

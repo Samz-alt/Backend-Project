@@ -3,13 +3,19 @@ import { APIError } from "../utils/APIError.js"
 import { APIResponse } from "../utils/APIResponse.js"
 import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/Cloudinary.js";
+import jwt from "jsonwebtoken";
 
 const generateAccessAndRefreshToken = async (userId) => {  //this function is written here for cleaner code
     try {
         const user = await User.findById(userId) //this is a Mongoose Document
 
+        // console.log(user);
+
+
         const accessToken = await user.generateAccessToken()
         const refreshToken = await user.generateRefreshToken()
+
+        // console.log(accessToken, refreshToken);
 
 
         user.refreshToken = refreshToken  //this is for updating the value in the user i.e. the document object of the MongoDB
@@ -113,7 +119,7 @@ const loginUser = asyncHandler(async (req, res) => {   //req and res both are ob
 
     const { username, email, password, } = req.body
 
-    if (!(username && email && password)) {
+    if (!(username || email) || !password) {
         throw new APIError(401, "Required Credentials Not Provided")
     }
 
@@ -173,6 +179,7 @@ const logoutUser = asyncHandler(async (req, res) => {
 
     const user = req.user
 
+    //We delete refresh tokens from the database because deleting cookies only removes the token from one client, not from the server’s list of valid sessions.
     await User.findByIdAndUpdate(
         user._id,
         {
@@ -194,11 +201,52 @@ const logoutUser = asyncHandler(async (req, res) => {
         .status(200)
         .clearCookie("accessToken", options)
         .clearCookie("refreshToken", options)
-        .json(201, {}, "User LoggedOut SuccessFully")
+        .json(new APIResponse(201, {}, "User LoggedOut SuccessFully"))
+})
+
+const refreshAccessToken = asyncHandler(async (req, res) => {
+    const refreshToken = req.cookies?.refreshToken || req.header("Authorization")?.replace("Bearer ", "")
+
+    if (!refreshToken) {
+        throw new APIError(401, "Unauthorized Request: Token Not Found")
+    }
+
+    const decodedToken = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET)
+
+    const user = await User.findById(decodedToken?._id)
+
+    if (!user) {
+        throw new APIError(401, "RefreshToken Not Found")
+    }
+
+    /* refreshToken is verified so that no one without user registration can generate access token, it also contains user information and as it is not verified anyone can generate token without any checks.
+       It is also done to check for sessions, if the session are over and logout is done then refreshToken also get deleted from the db and if not verifying the refreshToken then
+       then logging out doesn't really make sense. 
+    */
+    if (refreshToken !== user.refreshToken) {
+        throw new APIError(404, "Refresh Token is expired")
+    }
+
+    const options = {
+        httpOnly: true,
+        secure: true
+    }
+
+    const { newAccessToken, newRefreshToken } = await user.generateAccessAndRefreshToken(user._id)
+
+    return res
+        .status(200)
+        .cookie("accessToken", newAccessToken, options)
+        .cookie("accessToken", newRefreshToken, options)
+        .json(
+            new APIResponse(201, {}, "Resquest Completed")
+        )
+
 })
 
 export {
     registerUser,
     loginUser,
-    logoutUser
+    logoutUser,
+    refreshAccessToken
 }
