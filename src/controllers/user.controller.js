@@ -179,7 +179,7 @@ const logoutUser = asyncHandler(async (req, res) => {
 
     const user = req.user
 
-    //We delete refresh tokens from the database because deleting cookies only removes the token from one client, not from the server’s list of valid sessions.
+    //We delete refresh tokens from the database because deleting cookies only removes the token from one client, not from the server’s list of valid sessions. This session no longer recognized.
     await User.findByIdAndUpdate(
         user._id,
         {
