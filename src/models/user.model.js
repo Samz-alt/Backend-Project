@@ -28,8 +28,15 @@ const userSchema = new mongoose.Schema({
         type: String, //cloudnary bucket URL
         required: true
     },
+    avatarPublicId: {
+        type: String, //cloudnary public ID
+        required: true
+    },
     coverImage: {
         type: String,
+    },
+    coverImagePublicId: {
+        type: String, //cloudnary public ID=
     },
     password: {
         type: String,
