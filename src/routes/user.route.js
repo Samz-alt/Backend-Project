@@ -24,11 +24,11 @@ router.route("/login").post(upload.none(), loginUser) //even if no file data is 
 
 router.route("/logout").post(verifyJwt, logoutUser)
 router.route("/refresh-token").post(refreshAccessToken)
-router.route("/user").post(verifyJwt, getCurrentUser)
+router.route("/user").get(verifyJwt, getCurrentUser)
 router.route("/update-password").post(verifyJwt, changeUserAccountPassword)
-router.route("/update-userdetails").post(verifyJwt, updateUserDetails)
-router.route("/update-avatarImage").post(verifyJwt, upload.single("avatar"), changeUserAvatar)
-router.route("/update-coverImage").post(verifyJwt, upload.single("coverImage"), changeUserCoverImage)
+router.route("/update-userdetails").patch(verifyJwt, updateUserDetails)
+router.route("/update-avatarImage").patch(verifyJwt, upload.single("avatar"), changeUserAvatar)
+router.route("/update-coverImage").patch(verifyJwt, upload.single("coverImage"), changeUserCoverImage)
 
 
 export default router

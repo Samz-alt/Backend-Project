@@ -15,13 +15,14 @@ const generateAccessAndRefreshToken = async (userId) => {  //this function is wr
         const accessToken = await user.generateAccessToken()
         const refreshToken = await user.generateRefreshToken()
 
-        // console.log(accessToken, refreshToken);
+        console.log(accessToken, refreshToken);
 
 
         user.refreshToken = refreshToken  //this is for updating the value in the user i.e. the document object of the MongoDB
         user.save({ validateBeforeSave: false }) //this saves the value in the MongoDB and it asks for password for modifying in DB, so this property is used for not requiring password.
 
         return { accessToken, refreshToken }
+
 
         // OR 
         // await User.findByIdAndUpdate(userId, { refreshToken: refreshToken }, { new: true })
@@ -65,7 +66,7 @@ const registerUser = asyncHandler(async (req, res) => {
     }
 
     //this req is passed throughout and after adding the file to the local server multer attaches more options in req other than what is provided by express.
-    console.log(req.files);
+    // console.log(req.files);
     const avatarLocalPath = req.files?.avatar?.[0]?.path  //optional chaining is for safety reasons
     const coverImageLocalPath = req.files?.coverImage?.[0]?.path  //optional chaining is for safety reasons
 
@@ -75,7 +76,7 @@ const registerUser = asyncHandler(async (req, res) => {
 
     const avatarUpload = await uploadOnCloudinary(avatarLocalPath)
     const coverImageUpload = await uploadOnCloudinary(coverImageLocalPath)
-    console.log(avatarUpload);
+    // console.log(avatarUpload);
 
     if (!avatarUpload.url) {
         throw new APIError(400, "Avatar is required")
@@ -91,11 +92,11 @@ const registerUser = asyncHandler(async (req, res) => {
         coverImage: coverImageUpload?.url || "",
         coverImagePublicId: coverImageUpload?.public_id || ""
     })
-    console.log(user)
+    // console.log(user)
 
 
     const userCreated = await User.findById(user._id).select("-password -refreshToken") //this select is used to deselect the field and the db doesn't share that field's value.
-    console.log(userCreated)
+    // console.log(userCreated)
 
 
     if (!userCreated) {
@@ -209,13 +210,13 @@ const logoutUser = asyncHandler(async (req, res) => {
 })
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
-    const refreshToken = req.cookies?.refreshToken || req.header("Authorization")?.replace("Bearer ", "")
+    const incomingrefreshToken = req.cookies?.refreshToken
 
-    if (!refreshToken) {
+    if (!incomingrefreshToken) {
         throw new APIError(401, "Unauthorized Request: Token Not Found")
     }
 
-    const decodedToken = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET)
+    const decodedToken = jwt.verify(incomingrefreshToken, process.env.REFRESH_TOKEN_SECRET)
 
     const user = await User.findById(decodedToken?._id)
 
@@ -227,7 +228,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
        It is also done to check for sessions, if the session are over and logout is done then refreshToken also get deleted from the db and if not verifying the refreshToken then
        then logging out doesn't really make sense. 
     */
-    if (refreshToken !== user.refreshToken) {
+    if (incomingrefreshToken !== user.refreshToken) {
         throw new APIError(404, "Refresh Token is expired")
     }
 
@@ -236,12 +237,12 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
         secure: true
     }
 
-    const { newAccessToken, newRefreshToken } = await user.generateAccessAndRefreshToken(user._id)
+    const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id)
 
     return res
         .status(200)
-        .cookie("accessToken", newAccessToken, options)
-        .cookie("accessToken", newRefreshToken, options)
+        .cookie("accessToken", accessToken, options)
+        .cookie("refreshToken", refreshToken, options)
         .json(
             new APIResponse(201, {}, "Resquest Completed")
         )
@@ -284,7 +285,7 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 const updateUserDetails = asyncHandler(async (req, res) => {
     const { fullName, email } = req.body
 
-    if (!fullName || !email) {
+    if (!fullName && !email) {
         throw new APIError(401, "Fields are Required")
     }
 
@@ -321,7 +322,7 @@ const changeUserAvatar = asyncHandler(async (req, res) => {
     }
 
     const deleteOldAvatar = await deleteFromCloudinary(req.user?.avatarPublicId)
-    console.log(deleteOldAvatar)
+    // console.log(deleteOldAvatar)
 
     const user = await User.findByIdAndUpdate(
         req.user._id,
@@ -360,8 +361,8 @@ const changeUserCoverImage = asyncHandler(async (req, res) => {
         req.user._id,
         {
             $set: {
-                avatar: uploadNewCoverImage.url,
-                avatarPublicId: uploadNewCoverImage.public_id
+                coverImage: uploadNewCoverImage.url,
+                coverImagePublicId: uploadNewCoverImage.public_id
             }
         },
         {
@@ -370,6 +371,81 @@ const changeUserCoverImage = asyncHandler(async (req, res) => {
     ).select("-password -refreshToken")
 
     return res.status(200).json(new APIResponse(201, user, "CoverImage Changed Successfully"))
+})
+
+
+const getUserChannelProfile = asyncHandler(async (req, res) => {
+    const { username } = req.params
+
+    if (!username) {
+        throw new APIError(404, "Parameter not Found")
+    }
+
+    //this returns an array
+    const channel = await User.aggregate([
+        {
+            $match: username
+        },
+        {   // for searching the list of subscribers with my channel name
+            $lookup: {
+                from: "subscriptions",
+                foreignField: "channel",
+                localField: "._id",
+                as: "subscribers"
+            }
+        },
+        {   // for searching the list of channel to whom I subscribed
+            $lookup: {
+                from: "subscriptions",
+                foreignField: "subcribers",
+                localField: "._id",
+                as: "subscriberedTo"
+            }
+        },
+        {   // this is for adding a new field
+            $addFields: {
+                subcribersCount: {
+                    $size: "$subscribers"
+                },
+                subscribedToCount: {
+                    $size: "$subscribedTo"
+                },
+                isSubscribed: {
+                    $cond: {
+                        if: { $in: [req.user?._id, "$subscribers.subscriber"] },
+                        then: true,
+                        else: false
+                    }
+                }
+            }
+        },
+        {
+            $project: {
+                username: 1,
+                fullname: 1,
+                email: 1,
+                avatar: 1,
+                coverImage: 1,
+                subcribersCount: 1,
+                subscribedToCount: 1
+            }
+        }
+
+    ])
+
+    if (!channel?.length) {
+        throw new APIError(404, "Channel Does Not Exist")
+    }
+
+    return res
+        .status(200)
+        .json(
+            new APIResponse(
+                201,
+                channel[0],
+                "User Channel Fetched Successfully"
+            )
+        )
 })
 
 
@@ -382,5 +458,6 @@ export {
     changeUserAccountPassword,
     updateUserDetails,
     changeUserAvatar,
-    changeUserCoverImage
+    changeUserCoverImage,
+    getUserChannelProfile
 }
