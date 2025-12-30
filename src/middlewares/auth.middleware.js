@@ -11,7 +11,7 @@ const verifyJwt = asyncHandler(async (req, _, next) => {
     // req.header("Authorization") is the Express-friendly way.    req.headers.authorization is the raw Node way.
 
     const accessToken = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "")
-    console.log(accessToken);
+    // console.log(accessToken);
 
     if (!accessToken) {
         throw new APIError(401, "Unauthorized Request")

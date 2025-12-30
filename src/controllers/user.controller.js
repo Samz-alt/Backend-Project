@@ -376,6 +376,7 @@ const changeUserCoverImage = asyncHandler(async (req, res) => {
 
 const getUserChannelProfile = asyncHandler(async (req, res) => {
     const { username } = req.params
+    console.log(username);
 
     if (!username) {
         throw new APIError(404, "Parameter not Found")
@@ -384,21 +385,23 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     //this returns an array
     const channel = await User.aggregate([
         {
-            $match: username
+            $match: {
+                username: username?.toLowerCase()
+            }
         },
         {   // for searching the list of subscribers with my channel name
             $lookup: {
                 from: "subscriptions",
+                localField: "_id",
                 foreignField: "channel",
-                localField: "._id",
                 as: "subscribers"
             }
         },
         {   // for searching the list of channel to whom I subscribed
             $lookup: {
                 from: "subscriptions",
-                foreignField: "subcribers",
-                localField: "._id",
+                localField: "_id",
+                foreignField: "subscriber",
                 as: "subscriberedTo"
             }
         },
@@ -408,7 +411,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
                     $size: "$subscribers"
                 },
                 subscribedToCount: {
-                    $size: "$subscribedTo"
+                    $size: "$subscriberedTo"
                 },
                 isSubscribed: {
                     $cond: {
