@@ -4,6 +4,7 @@ import { APIResponse } from "../utils/APIResponse.js"
 import { User } from "../models/user.model.js";
 import { deleteFromCloudinary, uploadOnCloudinary } from "../utils/Cloudinary.js";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 
 const generateAccessAndRefreshToken = async (userId) => {  //this function is written here for cleaner code
     try {
@@ -430,7 +431,8 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
                 avatar: 1,
                 coverImage: 1,
                 subcribersCount: 1,
-                subscribedToCount: 1
+                subscribedToCount: 1,
+                isSubscribed: 1
             }
         }
 
@@ -451,6 +453,65 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         )
 })
 
+const getUserWatchHistory = asyncHandler(async (req, res) => {
+    // Each $lookup creates a new, isolated pipeline context tied to the foreign collection
+    const user = await User.aggregate([
+        {
+            $match: {
+                _id: new mongoose.Types.ObjectId(req.user?._Id)  //as id returns a string so for that to return an ObjectId, this method is used.
+            },
+        },
+        {
+            // create a new pipeline for the videos document
+            $lookup: {
+                from: "videos",
+                localField: "watchHistory",
+                foreignField: "_id",
+                as: "watchHistory",
+                pipeline: [
+                    {
+                        // create a new pipeline for the user document
+                        $lookup: {
+                            from: "user",
+                            localField: "owner",
+                            foreignField: "_id",
+                            as: "owner",
+                            pipeline: [
+                                {
+                                    $project: {
+                                        fullName: 1,
+                                        username: 1,
+                                        avatar: 1
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        // this is done as the above stage creates an array for the owner field, and to return an object first value is returned to the owner field.
+                        $addFields: {
+                            owner: {
+                                $first: "$owner"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+
+    ])
+
+    return res
+        .status(200)
+        .json(
+            new APIResponse(
+                201,
+                user[0].watchHistory,
+                "Watch History Fetched SuccessFully"
+            )
+        )
+})
+
 
 export {
     registerUser,
@@ -462,5 +523,6 @@ export {
     updateUserDetails,
     changeUserAvatar,
     changeUserCoverImage,
-    getUserChannelProfile
+    getUserChannelProfile,
+    getUserWatchHistory
 }
