@@ -453,6 +453,37 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         )
 })
 
+const updateWatchHistory = asyncHandler(async (req, res) => {
+    const userId = req.user?._id
+    const { videoId } = req.query
+
+    if (!videoId) {
+        throw new APIError(404, "Params Not Found")
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+        userId,
+        {
+            $push: {
+                watchHistory: new mongoose.Types.ObjectId(videoId)
+            }
+        },
+        {
+            new: true
+        })
+        .select("-password -refreshToken")
+
+    return res
+        .status(200)
+        .json(
+            new APIResponse(
+                201,
+                updatedUser,
+                "Watch History Updated"
+            )
+        )
+})
+
 const getUserWatchHistory = asyncHandler(async (req, res) => {
     // Each $lookup creates a new, isolated pipeline context tied to the foreign collection
     const user = await User.aggregate([
@@ -524,5 +555,6 @@ export {
     changeUserAvatar,
     changeUserCoverImage,
     getUserChannelProfile,
+    updateWatchHistory,
     getUserWatchHistory
 }
