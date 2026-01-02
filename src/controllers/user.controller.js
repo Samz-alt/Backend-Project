@@ -503,7 +503,7 @@ const getUserWatchHistory = asyncHandler(async (req, res) => {
                     {
                         // create a new pipeline for the user document
                         $lookup: {
-                            from: "user",
+                            from: "users",
                             localField: "owner",
                             foreignField: "_id",
                             as: "owner",
