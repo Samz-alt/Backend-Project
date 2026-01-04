@@ -79,7 +79,7 @@ const deleteVideo = asyncHandler(async (req, res) => {
         throw new APIError(404, "Video Doesn't Exist")
     }
 
-    if (video.owner !== userId) {
+    if (!video.owner.equals(userId)) {
         throw new APIError(401, "User is Not Authorized for performing the action")
     }
 
