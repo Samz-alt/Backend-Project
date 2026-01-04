@@ -10,9 +10,9 @@ const router = Router()
 router.route("/createPlaylist").post(verifyJwt, upload.none(), createPlaylist)
 router.route("/userPlaylist/:userId").get(verifyJwt, getUserPlaylists)
 router.route("/Playlist/:playlistId").get(verifyJwt, getPlaylistById)
-router.route("/addVideo/:playlistId/:videoId").get(verifyJwt, addVideoToPlaylist)
-router.route("/removeVideo/:playlistId/:videoId").get(verifyJwt, removeVideoFromPlaylist)
-router.route("/deletePlaylist/:playlistId").get(verifyJwt, deletePlaylist)
-router.route("/updatePlaylist/:playlistId").get(verifyJwt, updatePlaylist)
+router.route("/addVideo/:playlistId/:videoId").patch(verifyJwt, addVideoToPlaylist)
+router.route("/removeVideo/:playlistId/:videoId").delete(verifyJwt, removeVideoFromPlaylist)
+router.route("/deletePlaylist/:playlistId").delete(verifyJwt, deletePlaylist)
+router.route("/updatePlaylist/:playlistId").patch(verifyJwt, updatePlaylist)
 
 export default router
