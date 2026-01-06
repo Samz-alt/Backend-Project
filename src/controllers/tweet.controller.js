@@ -233,7 +233,15 @@ const getAllUserTweets = asyncHandler(async (req, res) => {
     ])
 
     if (!allTweets?.length) {
-        throw new APIError(404, "User Doesn't Have any Tweets")
+        return res
+            .status(200)
+            .json(
+                new APIResponse(
+                    200,
+                    {},
+                    "User Doesn't Have any Tweets"
+                )
+            )
     }
 
     return res

@@ -10,10 +10,9 @@ import { User } from "../models/user.model.js"
 const getChannelStats = asyncHandler(async (req, res) => {
     // TODO: Get the channel stats like total video views, total subscribers, total videos, total likes etc.
 
-
-    const userId = req.user?._id
-    if (!userId || !isValidObjectId(userId)) {
-        throw new APIError(400, "userId is empty")
+    const { channelId } = req.body
+    if (!channelId || !isValidObjectId(channelId)) {
+        throw new APIError(400, "channelId is empty")
     }
 
     let channelStats = []
@@ -22,7 +21,7 @@ const getChannelStats = asyncHandler(async (req, res) => {
     const totalViews = await Video.aggregate([
         {
             $match: {
-                owner: new mongoose.Types.ObjectId(userId)
+                owner: new mongoose.Types.ObjectId(channelId)
             }
         },
         {
@@ -50,7 +49,7 @@ const getChannelStats = asyncHandler(async (req, res) => {
     const totalSubs = await Subscription.aggregate([
         {
             $match: {
-                channel: new mongoose.Types.ObjectId(userId)
+                channel: new mongoose.Types.ObjectId(channelId)
             }
         },
         {
@@ -65,7 +64,7 @@ const getChannelStats = asyncHandler(async (req, res) => {
     const totalVideos = await Video.aggregate([
         {
             $match: {
-                owner: new mongoose.Types.ObjectId(userId)
+                owner: new mongoose.Types.ObjectId(channelId)
             }
         },
         {
@@ -111,7 +110,7 @@ const getChannelStats = asyncHandler(async (req, res) => {
                     },
                     {
                         $match: {
-                            owner: userId
+                            owner: channelId
                         }
                     }
                 ]
@@ -139,7 +138,7 @@ const getChannelStats = asyncHandler(async (req, res) => {
 
 
 const getChannelVideos = asyncHandler(async (req, res) => {
-    const { channelId } = req.params
+    const { channelId } = req.body
     if (!channelId || !isValidObjectId(channelId)) {
         throw new APIError(400, "ChannelId is empty")
     }

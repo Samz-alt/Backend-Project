@@ -208,7 +208,15 @@ const getLikedVideos = asyncHandler(async (req, res) => {
     ])
 
     if (!likedVideos?.length) {
-        throw new APIError(404, "User has no Liked Videos")
+        return res
+            .status(200)
+            .json(
+                new APIResponse(
+                    200,
+                    {},
+                    "No Liked Videos"
+                )
+            )
     }
 
     return res

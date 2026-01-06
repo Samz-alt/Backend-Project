@@ -70,9 +70,16 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
     ])
 
     if (!playlists?.length) {
-        throw new APIError(404, "No Playlists Available")
+        return res
+            .status(200)
+            .json(
+                new APIResponse(
+                    200,
+                    {},
+                    "No Playlists Available"
+                )
+            )
     }
-
     return res
         .status(200)
         .json(

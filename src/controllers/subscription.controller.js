@@ -113,7 +113,15 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
     ])
 
     if (!subcribers?.length) {
-        throw new APIError(404, "This Channel Doesn't Have Any Subscribers")
+        return res
+            .status(200)
+            .json(
+                new APIResponse(
+                    200,
+                    {},
+                    "This Channel Doesn't Have Any Subscribers"
+                )
+            )
     }
 
     return res
@@ -170,7 +178,15 @@ const getSubscribedChannels = asyncHandler(async (req, res) => {
         }
     ])
     if (!subscribed?.length) {
-        throw new APIError(404, "This Channel Doesn't Have Any Subscribers")
+        return res
+            .status(200)
+            .json(
+                new APIResponse(
+                    200,
+                    {},
+                    "This Channel Hasn't Subscribed To any Channels"
+                )
+            )
     }
 
     return res
