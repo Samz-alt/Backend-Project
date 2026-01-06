@@ -163,7 +163,10 @@ const deleteTweet = asyncHandler(async (req, res) => {
         throw new APIError(400, "TweetId is empty")
     }
 
-    const tweet = await Tweet.findById(tweetId) //tweet is now an instance of MONGOOSE DOCUMENT
+    const tweet = await Tweet.findOne({   // tweet is now an instance of MONGOOSE DOCUMENT
+        _id: tweetId,
+        owner: req.user?._id
+    })
 
     if (!tweet) {
         throw new APIError(404, "Tweet Not Found")
@@ -180,14 +183,14 @@ const deleteTweet = asyncHandler(async (req, res) => {
     const deletedTweet = await tweet.deleteOne()
 
     return res
-    .status(200)
-    .json(
-        new APIResponse(
-            200,
-            deletedTweet,
-            "Tweet Deleted SuccessFully"
+        .status(200)
+        .json(
+            new APIResponse(
+                200,
+                deletedTweet,
+                "Tweet Deleted SuccessFully"
+            )
         )
-    )
 })
 
 
@@ -234,16 +237,16 @@ const getAllUserTweets = asyncHandler(async (req, res) => {
     }
 
     return res
-    .status(200)
-    .json(
-        new APIResponse(
-            200,
-            allTweets,
-            "Tweets Fetched SuccessFully"
+        .status(200)
+        .json(
+            new APIResponse(
+                200,
+                allTweets,
+                "Tweets Fetched SuccessFully"
+            )
         )
-    )
 })
 
 
 
-export { createTweet, updateTweet,deleteTweet,getAllUserTweets }
+export { createTweet, updateTweet, deleteTweet, getAllUserTweets }

@@ -62,7 +62,9 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
         },
         {
             $addFields: {
-                $first: "$owner"
+                owner: {
+                    $first: "$owner"
+                }
             }
         }
     ])
@@ -89,7 +91,7 @@ const getPlaylistById = asyncHandler(async (req, res) => {
         throw new APIError(404, "Id Not Found")
     }
 
-    if (!isValidObjectId) {
+    if (!isValidObjectId(playlistId)) {
         throw new APIError(401, "Not a valid ObjectId")
     }
 
