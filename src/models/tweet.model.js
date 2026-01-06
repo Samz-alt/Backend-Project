@@ -8,7 +8,13 @@ const tweetSchema = new mongoose.Schema({
     content: {
         type: String,
         reqruired: true,
-    }
+    },
+    image: [{
+        type: String
+    }],
+    imagePublicId: [{
+        type: String
+    }]
 }, { timestamps: true })
 
 export const Tweet = mongoose.model("Tweet", tweetSchema)
