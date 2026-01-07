@@ -6,14 +6,15 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 
 
 const addComment = asyncHandler(async (req, res) => {
-    const content = req.body
+    const { content } = req.body
     const { videoId } = req.params
+
 
     if (!content) {
         throw new APIError(404, "Required Field Not Found")
     }
 
-    if ([content].some((field) => field.trim() === "")) {
+    if (content.trim() === "") {
         throw new APIError(404, "Required Field is Empty")
     }
 
@@ -23,7 +24,7 @@ const addComment = asyncHandler(async (req, res) => {
 
     const comment = await Comment.create(
         {
-            comment: content,
+            content,
             video: videoId,
             owner: req.user?._id
         }
@@ -65,7 +66,7 @@ const updateComment = asyncHandler(async (req, res) => {
         },
         {
             $set: {
-                comment: content
+                content
             }
         },
         {
@@ -90,6 +91,8 @@ const updateComment = asyncHandler(async (req, res) => {
 
 const deleteComment = asyncHandler(async (req, res) => {
     const { commentId } = req.body
+    console.log(commentId);
+
     if (!commentId) {
         throw new APIError(404, "CommentId Not Received")
     }
@@ -128,7 +131,7 @@ const getVideoComments = asyncHandler(async (req, res) => {
         throw new APIError(404, "Not a valid ObjectId")
     }
 
-    const commentsPipeline = await Comment.aggregate([
+    const commentsPipeline = Comment.aggregate([
         {
             $match: {
                 video: new mongoose.Types.ObjectId(videoId)
@@ -166,7 +169,7 @@ const getVideoComments = asyncHandler(async (req, res) => {
         limit: parseInt(limit)
     }
 
-    const comments = await Comment.aggregatePaginate(commentsPipeline, options)
+    const comments = await Comment.aggregatePaginate(commentsPipeline, options) //never to execute the comments pipeline using await, it will be done in the commentsPipeline
 
     return res
         .status(200)

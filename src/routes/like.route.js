@@ -8,7 +8,7 @@ const router = Router()
 router.use(verifyJwt)
 
 router.route("/watch/:videoId").post(toggleVideoLike)
-router.route("/comments/:commentId").post(toggleCommentLike)
+router.route("/comment/:commentId").post(toggleCommentLike)
 router.route("/tweet/:tweetId").post(toggleTweetLike)
 router.route("/likedVideos").get(getLikedVideos)
 

@@ -1,4 +1,4 @@
-import mongoose from "mongoose"
+import mongoose, { isValidObjectId } from "mongoose"
 import { Video } from "../models/video.model.js"
 import { Subscription } from "../models/subscription.model.js"
 import { Like } from "../models/like.model.js"
@@ -158,7 +158,6 @@ const getChannelVideos = asyncHandler(async (req, res) => {
                 pipeline: [
                     {
                         $project: {
-                            _id: 1,
                             fullName: 1,
                             username: 1,
                             avatar: 1
@@ -180,19 +179,19 @@ const getChannelVideos = asyncHandler(async (req, res) => {
         return res
             .status(200)
             .json(
-                200,
-                {},
-                "Channel Doesn't Have Any Videos"
-            )
+                new APIResponse(200,
+                    {},
+                    "Channel Doesn't Have Any Videos"
+                ))
     }
 
     return res
         .status(200)
         .json(
-            200,
-            videos,
-            "Channel All Videos Fetched"
-        )
+            new APIResponse(200,
+                videos,
+                "Channel All Videos Fetched"
+            ))
 })
 
 export { getChannelStats, getChannelVideos }
