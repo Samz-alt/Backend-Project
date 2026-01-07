@@ -4,6 +4,7 @@ import { APIResponse } from "../utils/APIResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { Tweet } from "../models/tweet.model.js"
 import { deleteFromCloudinary, uploadOnCloudinary } from "../utils/Cloudinary.js";
+import { log } from "console";
 
 const createTweet = asyncHandler(async (req, res, err) => {
     const { content } = req.body
@@ -72,26 +73,41 @@ const updateTweet = asyncHandler(async (req, res) => {
     const { tweetId } = req.params
     const { oldImagesPublicId, oldImagesURL, content } = req.body
 
+
     if (!tweetId || !isValidObjectId(tweetId)) {
         throw new APIError(400, "TweetId is empty")
     }
 
-    if (!content || !content.trim() === "") {
+    if (!content || content.trim() === "") {
         throw new APIError(400, "Required Fields Cannot Be Empty")
     }
 
-
+    let updatedTweet = []
     let oldPublicId
     let oldURL
     let uploadedImagesPublicId = []
     let uploadedImagesURL = []
 
 
-    if (oldImagesPublicId, oldImagesURL) {
+    if (oldImagesPublicId && oldImagesURL) {
         try {
-            oldPublicId = Array.isArray(oldImagesPublicId) ? oldImagesPublicId : [oldImagesPublicId]
-            oldURL = Array.isArray(oldImagesURL) ? oldImagesURL : [oldImagesURL]
-            for (const id of publicId) {
+            oldPublicId = Array.isArray(oldImagesPublicId) ? oldImagesPublicId : JSON.parse(oldImagesPublicId)
+            oldURL = Array.isArray(oldImagesURL) ? oldImagesURL : JSON.parse(oldImagesURL)
+
+            const imageDelete = await Tweet.findOneAndUpdate(
+                {
+                    _id: tweetId,
+                    owner: req.user?._id
+                },
+                {
+                    $pullAll: {
+                        image: oldURL,
+                        imagePublicId: oldPublicId
+                    }
+                }
+            )
+            updatedTweet.push(imageDelete)
+            for (const id of oldPublicId) {
                 await deleteFromCloudinary(id)
             }
         }
@@ -100,14 +116,35 @@ const updateTweet = asyncHandler(async (req, res) => {
         }
     }
 
-    if (req.files) {
+    if (req.files && req.files.length > 0) {
         const images = Array.isArray(req.files) ? req.files : []
         try {
             for (const image of images) {
-                const png = await uploadOnCloudinary(image)
+                const png = await uploadOnCloudinary(image.path)
                 uploadedImagesURL.push(png.url)
                 uploadedImagesPublicId.push(png.public_id)
             }
+            const imageUpload = await Tweet.findOneAndUpdate(
+                {
+                    _id: tweetId,
+                    owner: req.user?._id
+                },
+                {
+                    $push: {
+                        image: {
+                            $each: uploadedImagesURL || undefined
+                        },
+                        imagePublicId: {
+                            $each: uploadedImagesPublicId || undefined
+                        }
+
+                    }
+                },
+                {
+                    new: true
+                }
+            )
+            updatedTweet.push(imageUpload)
         } catch (error) {
             for (const id of uploadedImagesPublicId) {
                 await deleteFromCloudinary(id)
@@ -116,7 +153,7 @@ const updateTweet = asyncHandler(async (req, res) => {
         }
     }
 
-    const updatedTweet = await Tweet.findOneAndUpdate(
+    const contentUpdate = await Tweet.updateOne(
         {
             _id: tweetId,
             owner: req.user?._id
@@ -125,21 +162,16 @@ const updateTweet = asyncHandler(async (req, res) => {
             $set: {
                 content
             },
-            $pullAll: {
-                image: oldURL,
-                imagePublicId: oldPublicId
-            },
-            $push: {
-                $each: {
-                    image: uploadedImagesURL,
-                    imagePublicId: uploadedImagesPublicId
-                }
-            }
         },
         {
             new: true
         }
     )
+    if (!contentUpdate) {
+        throw new APIError(500, "Internal Server Error")
+    }
+
+    updatedTweet.push(contentUpdate)
 
     if (!updatedTweet) {
         throw new APIError(500, "Internal Server Error")
@@ -200,10 +232,10 @@ const getAllUserTweets = asyncHandler(async (req, res) => {
         throw new APIError(400, "userId is empty")
     }
 
-    const allTweets = Tweet.aggregate([
+    const allTweets = await Tweet.aggregate([
         {
             $match: {
-                owner: userId
+                owner: new mongoose.Types.ObjectId(userId)
             }
         },
         {
