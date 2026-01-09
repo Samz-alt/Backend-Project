@@ -1,6 +1,8 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import crypto from "crypto"
+import { type } from "os";
 
 const userSchema = new mongoose.Schema({
     username: {
@@ -44,6 +46,16 @@ const userSchema = new mongoose.Schema({
     },
     refreshToken: {
         type: String,
+    },
+    isEmailVerified: {
+        type: Boolean,
+        default: false
+    },
+    emailVerificationToken: {
+        type: String,
+    },
+    emailVerificationExpiry:{
+        type: Date
     },
     watchHistory: [
         {
@@ -92,6 +104,17 @@ userSchema.methods.generateRefreshToken = function () {
             expiresIn: process.env.REFRESH_TOKEN_EXPIRY
         }
     )
+}
+
+userSchema.methods.generateTemporaryToken = function () {
+    const unhashedToken = crypto.randomBytes(20).toString("hex") //randombytes create the number of character and toString changes it to string and inside toString we provide what kind of character to change to string
+
+    const hashedToken = crypto.createHash("sha256").update(unhashedToken).digest("hex")
+
+    const tokenExpiry = Date.now() + (20 * 60 * 1000)  //20 mins. JS counts time in millisecond.
+
+    return { unhashedToken, hashedToken, tokenExpiry }
+
 }
 
 
