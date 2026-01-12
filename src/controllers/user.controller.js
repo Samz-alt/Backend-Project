@@ -5,6 +5,7 @@ import { User } from "../models/user.model.js";
 import { deleteFromCloudinary, uploadOnCloudinary } from "../utils/Cloudinary.js";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
+import { mailVerificationMailgenContent, sendEmail } from "../utils/mail.js";
 
 const generateAccessAndRefreshToken = async (userId) => {  //this function is written here for cleaner code
     try {
@@ -95,8 +96,25 @@ const registerUser = asyncHandler(async (req, res) => {
     })
     // console.log(user)
 
+    // generating temporary token for email verification
+    const { unhashedToken, hashedToken, tokenExpiry } = user.generateTemporaryToken()
+    // saving the hashedToken and expiry to the database
+    user.emailVerificationToken = hashedToken
+    user.emailVerificationExpiry = tokenExpiry
+    user.save({ validateBeforeSave: false })
 
-    const userCreated = await User.findById(user._id).select("-password -refreshToken") //this select is used to deselect the field and the db doesn't share that field's value.
+
+    await sendEmail({
+        email: user?.email,
+        subject: "Verify your email address",
+        mailGenContent: mailVerificationMailgenContent(
+            user?.username,
+            `${req.protocol}://${req.get("host")}/api/v1/users/verify-email/${hashedToken}`
+        )
+    })
+
+
+    const userCreated = await User.findById(user._id).select("-password -refreshToken -emailVerificationToken -emailVerificationExpiry") //this select is used to deselect the field and the db doesn't share that field's value.
     // console.log(userCreated)
 
 
