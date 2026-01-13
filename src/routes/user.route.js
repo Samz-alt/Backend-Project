@@ -2,10 +2,14 @@ import { Router } from "express";
 import { loginUser, logoutUser, registerUser, refreshAccessToken, changeUserAccountPassword, updateUserDetails, changeUserAvatar, changeUserCoverImage, getCurrentUser, getUserChannelProfile, updateWatchHistory } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyJwt } from "../middlewares/auth.middleware.js";
+import { registerValidator } from "../validation/user.validation.js";
+import { validate } from "../middlewares/user.middleware.js";
 
 const router = Router()
 
 router.route("/register").post(
+    registerValidator(),
+    validate(),
     upload.fields([{            //middleware is placed before the controller
         name: "avatar",
         maxCount: 1

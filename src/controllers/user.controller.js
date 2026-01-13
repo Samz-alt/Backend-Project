@@ -228,6 +228,41 @@ const logoutUser = asyncHandler(async (req, res) => {
         .json(new APIResponse(201, {}, "User LoggedOut SuccessFully"))
 })
 
+const verifyEmail = asyncHandler(async (req, res) => {
+    const { verificationToken } = req.params
+
+    if (!verificationToken) {
+        throw new APIError(401, "Unauthorized Request: Token Not Found")
+    }
+
+    const user = await User.findOne(
+        {
+            emailVerificationToken: verificationToken,
+            emailVerificationExpiry: { $gt: Date.now() }
+        }
+    )
+
+    if (!user) {
+        throw new APIError(400, "Token is Expired or Invalid")
+    }
+
+    user.emailVerificationToken = undefined
+    user.emailVerificationExpiry = undefined
+    user.isEmailVerified = true
+
+    user.save({ validateBeforeSave: false })
+
+    return res
+        .status(200)
+        .json(
+            new APIResponse(
+                200,
+                { isEmailVerified: true },
+                "Email Verified Successfully"
+            )
+        )
+})
+
 const refreshAccessToken = asyncHandler(async (req, res) => {
     const incomingrefreshToken = req.cookies?.refreshToken
 
