@@ -9,7 +9,7 @@ const router = Router()
 
 router.route("/register").post(
     registerValidator(),
-    validate(),
+    validate,
     upload.fields([{            //middleware is placed before the controller
         name: "avatar",
         maxCount: 1
