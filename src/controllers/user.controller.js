@@ -6,6 +6,9 @@ import { deleteFromCloudinary, uploadOnCloudinary } from "../utils/Cloudinary.js
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import { mailVerificationMailgenContent, sendEmail } from "../utils/mail.js";
+import axios from "axios"
+import qs from "qs"
+import { UserOAuth } from "../models/useroauth.model.js";
 
 const generateAccessAndRefreshToken = async (userId) => {  //this function is written here for cleaner code
     try {
@@ -262,6 +265,111 @@ const verifyEmail = asyncHandler(async (req, res) => {
             )
         )
 })
+
+const generateOAuthAccessAndRefreshToken = async (userId) => {
+    try {
+        const user = await UserOAuth.findById(userId)
+
+        const oauthAccessToken = await user.generateAccessTokenAuth()
+        const oauthRefreshToken = await user.generateRefreshTokenAuth()
+
+        user.refreshToken = oauthRefreshToken
+        user.save({ validateBeforeSave: false })
+
+        return { oauthAccessToken, oauthRefreshToken }
+
+    } catch (error) {
+        throw new APIError(500, "Something went wrong while generating both Access and Refresh Token")
+    }
+}
+
+const tokenExchange = asyncHandler(async (req, res) => {
+    const { code, code_verifier } = req.body
+
+    if (!code || !code_verifier) {
+        throw new APIError("Code and Code_Verifier Not Found")
+    }
+
+    const token = await axios.post("https://oauth2.googleapis.com/token",
+        qs.stringify({
+            code: code,
+            code_verifier: code_verifier,
+            redirect_uri: process.env.REDIRECT_URI,
+            client_id: process.env.GOOGLE_CLIENT_ID,
+            client_secret: process.env.GOOGLE_CLIENT_SECRET,
+            grant_type: "authorization_code"
+        }),
+        {
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded"
+            }
+        }
+    )
+
+    if (!token) {
+        throw new APIError("Server Error")
+    }
+
+    return res.status(200).json(token.data)
+})
+
+const oauthRegistrationAndLogin = asyncHandler(async (req, res) => {
+    const { idToken } = req.body
+
+    if (!idToken) {
+        throw new APIError(401, "Unauthorized Request: Id Token Not Found")
+    }
+
+    const decodedToken = jwt.decode(idToken)
+
+    if (!decodedToken) {
+        throw new APIError(400, "Invalid id_token");
+    }
+
+    const { name, email, email_verified, iss, sub, picture, given_name } = decodedToken
+
+    let authProvider
+    if (iss === 'https://accounts.google.com') {
+        authProvider = "google"
+    }
+
+    let user = await UserOAuth.findOne({
+        $or: [{ email }, { providerId: sub }]
+    }).select("-providerId -authProvider -refreshToken")
+
+    if (!user) {
+        user = await UserOAuth.create({
+            authProvider,
+            providerId: sub,
+            username: given_name,
+            fullName: name,
+            email,
+            isEmailVerified: email_verified,
+            avatar: picture
+        })
+    }
+
+
+    const options = {
+        httpOnly: true,
+        secure: true
+    }
+
+    const { oauthAccessToken, oauthRefreshToken } = await generateOAuthAccessAndRefreshToken(user._id)
+
+    console.log(user)
+    console.log(oauthAccessToken, oauthRefreshToken);
+
+    return res
+        .status(200)
+        .cookie("accessToken", oauthAccessToken, options)
+        .cookie("refreshToken", oauthRefreshToken, options)
+        .json(
+            user
+        )
+})
+
+
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
     const incomingrefreshToken = req.cookies?.refreshToken
@@ -609,5 +717,7 @@ export {
     changeUserCoverImage,
     getUserChannelProfile,
     updateWatchHistory,
-    getUserWatchHistory
+    getUserWatchHistory,
+    tokenExchange,
+    oauthRegistrationAndLogin
 }
